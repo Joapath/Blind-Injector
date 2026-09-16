@@ -24,6 +24,7 @@ class SearchStrategy(ABC):
         position: int,
         charset: str,
         predicate: ConditionPredicate,
+        confirmation: ConditionPredicate | None = None,
     ) -> CharacterResult:
         """Return the character found at position, or a failed result."""
         raise NotImplementedError

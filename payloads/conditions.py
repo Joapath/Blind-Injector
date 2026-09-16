@@ -23,3 +23,12 @@ class AsciiSubstringConditionBuilder(ConditionBuilder):
             raise TypeError("value must be an integer")
 
         return f"ASCII(SUBSTRING({expression},{position},1)){operator}{value}"
+
+    def build_length(self, expression: str, position: int, operator: str = "<") -> str:
+        if not expression.strip():
+            raise ValueError("expression cannot be empty")
+        if position < 1:
+            raise ValueError("position must be positive")
+        if operator not in _ALLOWED_OPERATORS:
+            raise ValueError(f"Unsupported comparison operator: {operator}")
+        return f"LENGTH({expression}){operator}{position}"

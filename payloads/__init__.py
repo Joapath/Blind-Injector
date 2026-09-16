@@ -1,6 +1,7 @@
 """SQL condition, payload, and injection-point abstractions."""
 
 from .boolean import BooleanPayloadBuilder
+from .time_based import TimePayloadBuilder
 from .conditions import AsciiSubstringConditionBuilder
 from .contracts import ConditionBuilder, InjectionPoint, PayloadBuilder
 from .error import ConditionalErrorPayloadBuilder
@@ -15,6 +16,7 @@ __all__ = [
     "AsciiSubstringConditionBuilder",
     "BodyParameterInjectionPoint",
     "BooleanPayloadBuilder",
+    "TimePayloadBuilder",
     "ConditionalErrorPayloadBuilder",
     "ConditionBuilder",
     "CookieInjectionPoint",

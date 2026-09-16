@@ -24,6 +24,17 @@ class RequestData:
         for name in ("headers", "cookies", "query", "body"):
             object.__setattr__(self, name, MappingProxyType(dict(getattr(self, name))))
 
+    def to_dict(self) -> dict[str, object]:
+        """Return a JSON-safe snapshot of this request."""
+        return {
+            "url": self.url,
+            "method": self.method,
+            "headers": dict(self.headers),
+            "cookies": dict(self.cookies),
+            "query": dict(self.query),
+            "body": dict(self.body),
+        }
+
 
 @dataclass(frozen=True, slots=True)
 class HttpResponseData:
@@ -45,3 +56,12 @@ class HttpResponseData:
     def content_length(self) -> int:
         """Return the length of the decoded response text."""
         return len(self.text)
+
+    def to_dict(self) -> dict[str, object]:
+        """Return a JSON-safe snapshot of this response."""
+        return {
+            "status_code": self.status_code,
+            "text": self.text,
+            "headers": dict(self.headers),
+            "elapsed_seconds": self.elapsed_seconds,
+        }

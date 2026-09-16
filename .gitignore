@@ -1,0 +1,20 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+entorno/
+venv/
+.venv/
+
+# Logs
+logs/
+*.log
+
+# IDE
+.vscode/
+
+# OS
+.DS_Store
+Docs/

@@ -32,6 +32,7 @@ class BruteForceStrategy(SearchStrategy):
         position: int,
         charset: str,
         predicate: ConditionPredicate,
+        confirmation: ConditionPredicate | None = None,
     ) -> CharacterResult:
         _validate_inputs(position, charset, predicate)
         attempts = 0
@@ -62,6 +63,7 @@ class BinarySearchStrategy(SearchStrategy):
         position: int,
         charset: str,
         predicate: ConditionPredicate,
+        confirmation: ConditionPredicate | None = None,
     ) -> CharacterResult:
         _validate_inputs(position, charset, predicate)
         values = sorted(ord(character) for character in charset)
@@ -82,7 +84,12 @@ class BinarySearchStrategy(SearchStrategy):
                 else:
                     high = middle - 1
 
-            return CharacterResult(position, chr(values[low]), attempts)
+            candidate = chr(values[low])
+            if confirmation is not None:
+                attempts += 1
+                if not confirmation(values[low]):
+                    return CharacterResult(position, None, attempts)
+            return CharacterResult(position, candidate, attempts)
 
         attempts += 1
         if not predicate(values[-1]):
@@ -98,4 +105,9 @@ class BinarySearchStrategy(SearchStrategy):
             else:
                 low = middle + 1
 
-        return CharacterResult(position, chr(values[low]), attempts)
+        candidate = chr(values[low])
+        if confirmation is not None:
+            attempts += 1
+            if not confirmation(values[low]):
+                return CharacterResult(position, None, attempts)
+        return CharacterResult(position, candidate, attempts)

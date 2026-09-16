@@ -13,6 +13,11 @@ class ConditionBuilder(ABC):
         """Return a SQL condition for one character position."""
         raise NotImplementedError
 
+    @abstractmethod
+    def build_length(self, expression: str, position: int, operator: str = "<") -> str:
+        """Return a condition about the expression length."""
+        raise NotImplementedError
+
 
 class PayloadBuilder(ABC):
     """Wrap a condition in the syntax required by a boolean payload."""
