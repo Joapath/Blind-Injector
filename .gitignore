@@ -21,3 +21,9 @@ Docs/
 
 # Bitácora de trabajo de Claude (notas de sesión, no versionar)
 Docs-Claude/
+burp*.txt
+cli/lab*-report.json
+resume-claude
+nuevo-resumen
+=13.0
+.agents/

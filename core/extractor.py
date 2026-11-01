@@ -87,8 +87,11 @@ class BlindExtractor(Extractor):
     def _binary_search_length(self, expression: str) -> int | None:
         """Find LENGTH(expression) using binary search over [0, max_length].
 
-        Costs ~log2(max_length) requests instead of checking at every position.
-        Returns the length, or None if it couldn't be determined.
+        Costs ~log2(max_length) + 2 requests.  After the search converges the
+        result is verified with two confirmation queries (LENGTH >= found and
+        LENGTH < found+1) so that a single flaky server response during the
+        search cannot silently truncate the extraction.  On a mismatch the
+        method returns None, falling the caller back to sequential mode.
         """
         low, high = 0, self._max_length
 
@@ -99,6 +102,7 @@ class BlindExtractor(Extractor):
             result = self.test_condition(condition)
             if self._delay:
                 self._sleeper(self._delay)
+            logger.debug("Length binary search: mid=%d result=%s", mid, result)
             if result:
                 low = mid
             else:
@@ -110,10 +114,43 @@ class BlindExtractor(Extractor):
             if not self.test_condition(verify):
                 if self._delay:
                     self._sleeper(self._delay)
-                return 0
+                logger.info(
+                    "LENGTH >= 1 was False; could be empty or a flaky "
+                    "oracle — falling back to sequential extraction",
+                )
+            else:
+                if self._delay:
+                    self._sleeper(self._delay)
+            return None
+
+        self._check_request_budget()
+        confirm_ge = self._condition_builder.build_length(expression, low, ">=")
+        if not self.test_condition(confirm_ge):
             if self._delay:
                 self._sleeper(self._delay)
+            logger.warning(
+                "Length verification failed: LENGTH >= %d was False; "
+                "falling back to sequential extraction", low,
+            )
             return None
+
+        if self._delay:
+            self._sleeper(self._delay)
+
+        self._check_request_budget()
+        confirm_next = self._condition_builder.build_length(expression, low + 1, ">=")
+        if self.test_condition(confirm_next):
+            if self._delay:
+                self._sleeper(self._delay)
+            logger.warning(
+                "Length verification failed: LENGTH >= %d was True (binary "
+                "search returned %d); falling back to sequential extraction",
+                low + 1, low,
+            )
+            return None
+
+        if self._delay:
+            self._sleeper(self._delay)
 
         return low
 
@@ -138,13 +175,14 @@ class BlindExtractor(Extractor):
                     logger.info("Oracle recovered after %d retry(ies)", attempt)
                 return True
             backoff = self._oracle_recheck_backoff * (2 ** attempt)
-            logger.warning(
+            logger.info(
                 "Oracle health check failed (attempt %d/%d), backing off %.1fs",
                 attempt + 1,
                 self._oracle_recheck_retries,
                 backoff,
             )
             self._sleeper(backoff)
+        logger.warning("Oracle health check failed after %d attempts", self._oracle_recheck_retries)
         return False
 
     def _find_character_with_retry(
@@ -189,14 +227,16 @@ class BlindExtractor(Extractor):
             return result
 
         for retry in range(self._position_retries):
-            if not self._oracle_health_check():
-                if not self._oracle_health_check_with_retry():
-                    logger.error(
-                        "Oracle unrecoverable at position %d, aborting retries", position
-                    )
-                    return result
+            if retry > 0:
+                if not self._oracle_health_check():
+                    if not self._oracle_health_check_with_retry():
+                        logger.error(
+                            "Oracle unrecoverable at position %d, aborting retries",
+                            position,
+                        )
+                        return result
 
-            logger.info(
+            logger.debug(
                 "Retrying position %d (attempt %d/%d)",
                 position,
                 retry + 1,
@@ -305,13 +345,36 @@ class BlindExtractor(Extractor):
                 complete = False
                 break
 
-        if effective_max != self._max_length and len(characters) == effective_max:
-            complete = True
-        elif not complete and len(characters) == effective_max:
+        if not complete and len(characters) == effective_max:
             end_condition = self._condition_builder.build_length(
                 expression, effective_max + 1
             )
-            complete = self.test_condition(end_condition)
+            if self.test_condition(end_condition):
+                complete = True
+            elif effective_max != self._max_length:
+                logger.warning(
+                    "Pre-extracted length %d may be wrong (LENGTH >= %d is "
+                    "True); continuing extraction up to max_length %d",
+                    effective_max, effective_max + 1, self._max_length,
+                )
+                for position in range(effective_max + 1, self._max_length + 1):
+                    self._check_request_budget()
+                    end_cond = self._condition_builder.build_length(
+                        expression, position
+                    )
+                    if self.test_condition(end_cond):
+                        if self._delay:
+                            self._sleeper(self._delay)
+                        complete = True
+                        break
+                    if self._delay:
+                        self._sleeper(self._delay)
+                    extra = self._find_character_with_retry(expression, position)
+                    characters.append(extra)
+                    if self._on_progress is not None:
+                        self._on_progress(expression, tuple(characters), False)
+                    if extra.character is None:
+                        break
             if self._delay:
                 self._sleeper(self._delay)
 

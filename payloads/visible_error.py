@@ -15,7 +15,7 @@ class PostgresCastPayloadBuilder(PayloadBuilder):
     """
 
     prefix: str = "'||(SELECT CAST(("
-    suffix: str = ") AS integer))||'--"
+    suffix: str = ") AS integer))||'-- "
 
     def __post_init__(self) -> None:
         if not self.prefix:

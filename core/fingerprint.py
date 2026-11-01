@@ -48,11 +48,11 @@ _DIALECT_PROBES: dict[str, str] = {
 }
 
 _PAYLOAD_SHAPES: tuple[tuple[str, str], ...] = (
-    ("' AND (", ")--"),        # string with single quote (default)
-    ("' AND ", "--"),           # string without parens
-    (" AND (", ")--"),         # numeric context (no quote)
-    ('" AND (', ")--"),        # double-quoted string
-    ("') AND (", ")--"),       # parenthesized query
+    ("' AND (", ")-- "),       # string with single quote (default)
+    ("' AND ", "-- "),          # string without parens
+    (" AND (", ")-- "),        # numeric context (no quote)
+    ('" AND (', ")-- "),       # double-quoted string
+    ("') AND (", ")-- "),      # parenthesized query
 )
 
 _WAF_STATUS_CODES = frozenset({403, 406, 429, 503})

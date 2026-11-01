@@ -44,7 +44,7 @@ class VisibleErrorTests(unittest.TestCase):
 
         self.assertEqual(result.extractions["password"].value, "S3cr3t!")
         self.assertTrue(result.extractions["password"].complete)
-        self.assertEqual(client.requests[2].cookies["TrackingId"], "'||(SELECT CAST((password) AS integer))||'--")
+        self.assertEqual(client.requests[2].cookies["TrackingId"], "'||(SELECT CAST((password) AS integer))||'-- ")
 
     def test_parser_returns_none_without_matching_error(self) -> None:
         extractor = ErrorValueExtractor(r'error: "(?P<value>.*?)"')

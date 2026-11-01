@@ -46,7 +46,7 @@ from utils.logging_setup import configure_logging  # noqa: E402
 
 
 DEFAULT_CHECKPOINT_DIR = Path.home() / ".blind-finder" / "checkpoints"
-DEFAULT_CHARSET = "abcdefghijklmnopqrstuvwxyz0123456789"
+DEFAULT_CHARSET = "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ _.,-@!()/:;#%+"
 
 
 class HelpFormatter(argparse.RawDescriptionHelpFormatter):
@@ -762,10 +762,15 @@ def main(argv: Sequence[str] | None = None) -> int:
                     "could not fingerprint the injection point automatically; "
                     "configure --technique/--detector manually"
                 )
+            user_chose_detector = args.true_text or args.expected_length or args.expected_status
             configuration = dataclasses.replace(
                 configuration,
                 technique=detected.technique,
-                detector=detected.detector or configuration.detector,
+                detector=(
+                    configuration.detector
+                    if user_chose_detector
+                    else detected.detector or configuration.detector
+                ),
                 attack_mode=detected.attack_mode or configuration.attack_mode,
                 detector_value=detected.detector_value or configuration.detector_value,
                 expected_length=(
@@ -803,9 +808,16 @@ def main(argv: Sequence[str] | None = None) -> int:
             logger.info(
                 "Calibration complete: baseline=%.3fs tolerance=%.3fs", baseline, tolerance
             )
-            configuration = dataclasses.replace(
-                configuration, timing_baseline=baseline, timing_tolerance=tolerance
-            )
+            updates: dict[str, object] = dict(timing_baseline=baseline, timing_tolerance=tolerance)
+            if configuration.timing_threshold is None and configuration.sleep_seconds is not None:
+                auto_threshold = configuration.sleep_seconds * 0.7
+                updates["timing_threshold"] = auto_threshold
+                ui_info(
+                    f"auto-calibrated timing threshold: {auto_threshold:.2f}s "
+                    f"(baseline={baseline:.3f}s, sleep={configuration.sleep_seconds}s)",
+                    prefix="calibration",
+                )
+            configuration = dataclasses.replace(configuration, **updates)
 
         # --- Enum shortcuts → populate args.enum (Obs. 2 del plan) ---
         if args.dbs:
@@ -856,9 +868,13 @@ def main(argv: Sequence[str] | None = None) -> int:
                 col_expr = build_enum_expression("columns", dialect, table=table, database=database)
                 ui_info(f"step 1/3: extracting columns from '{table}'...", prefix="dump")
                 result_1 = _run_extraction(col_config, [col_expr])
-                if not result_1.extractions[col_expr].complete:
-                    ui_warning("column extraction was incomplete; results may be partial")
+                col_incomplete = not result_1.extractions[col_expr].complete
                 columns = [c.strip() for c in result_1.extractions[col_expr].value.split(",") if c.strip()]
+                if col_incomplete and len(columns) > 1:
+                    dropped = columns.pop()
+                    ui_warning(
+                        f"column extraction was incomplete; dropped last partial column '{dropped}'"
+                    )
                 if not columns:
                     raise ValueError(
                         f"no columns discovered for table '{table}'; the table may "

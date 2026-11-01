@@ -257,8 +257,8 @@ class ConstantsTests(unittest.TestCase):
     def test_dump_extra_chars_contains_separator(self) -> None:
         self.assertIn(ROW_SEPARATOR, DUMP_EXTRA_CHARS)
 
-    def test_row_separator_is_section_sign(self) -> None:
-        self.assertEqual(ROW_SEPARATOR, "§")
+    def test_row_separator_is_tilde(self) -> None:
+        self.assertEqual(ROW_SEPARATOR, "~")
 
     def test_dump_extra_chars_has_uppercase_and_digits(self) -> None:
         for c in "ABCXYZ":

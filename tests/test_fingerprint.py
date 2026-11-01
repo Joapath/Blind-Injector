@@ -121,7 +121,7 @@ class BooleanFingerprintTests(unittest.TestCase):
         self.assertEqual(result.expected_status, 200)
         self.assertEqual(result.confidence, "confirmed")
         self.assertIsNone(result.dialect)
-        self.assertEqual(result.payload_shape, ("' AND (", ")--"))
+        self.assertEqual(result.payload_shape, ("' AND (", ")-- "))
         # baseline + true/false twice (probe + confirm) + 3 dialect probes = 8
         self.assertEqual(len(client.requests), 8)
 
@@ -221,7 +221,7 @@ class PayloadShapeTests(unittest.TestCase):
         result = fingerprinter.run()
 
         self.assertEqual(result.technique, "boolean")
-        self.assertEqual(result.payload_shape, (" AND (", ")--"))
+        self.assertEqual(result.payload_shape, (" AND (", ")-- "))
         self.assertIn("payload shape", " ".join(result.notes))
 
     def test_default_shape_has_no_shape_note(self) -> None:
@@ -236,7 +236,7 @@ class PayloadShapeTests(unittest.TestCase):
         fingerprinter, _ = build_fingerprinter(responder)
         result = fingerprinter.run()
 
-        self.assertEqual(result.payload_shape, ("' AND (", ")--"))
+        self.assertEqual(result.payload_shape, ("' AND (", ")-- "))
         self.assertFalse(any("payload shape" in n for n in result.notes))
 
 

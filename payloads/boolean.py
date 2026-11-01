@@ -10,7 +10,8 @@ class BooleanPayloadBuilder(PayloadBuilder):
     """Wrap a condition with configurable boolean injection delimiters."""
 
     prefix: str = "' AND ("
-    suffix: str = ")--"
+    # Trailing space after -- is required by MySQL; harmless for PostgreSQL/Oracle.
+    suffix: str = ")-- "
 
     def __post_init__(self) -> None:
         if not self.prefix:

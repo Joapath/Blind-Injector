@@ -391,7 +391,7 @@ class OracleHealthCheckTests(unittest.TestCase):
 
         health_checks = [
             r for r in client.requests
-            if r.query["tracking"].endswith("(1=1)--") or r.query["tracking"].endswith("(1=2)--")
+            if r.query["tracking"].endswith("(1=1)-- ") or r.query["tracking"].endswith("(1=2)-- ")
         ]
         self.assertEqual(len(health_checks), 0)
 

@@ -38,7 +38,7 @@ class TimingComponentTests(unittest.TestCase):
         builder = TimePayloadBuilder(5.0)
         self.assertEqual(
             builder.build("1=1"),
-            "' AND IF((1=1),SLEEP(5.0),0)--",
+            "' AND IF((1=1),SLEEP(5.0),0)-- ",
         )
 
     def test_payload_builder_supports_dialect_specific_template(self) -> None:
@@ -51,7 +51,7 @@ class TimingComponentTests(unittest.TestCase):
 
     def test_for_dialect_builds_known_presets(self) -> None:
         mysql = TimePayloadBuilder.for_dialect("mysql", 5.0)
-        self.assertEqual(mysql.build("1=1"), "' AND IF((1=1),SLEEP(5.0),0)--")
+        self.assertEqual(mysql.build("1=1"), "' AND IF((1=1),SLEEP(5.0),0)-- ")
 
         postgres = TimePayloadBuilder.for_dialect("postgres", 5.0)
         self.assertEqual(

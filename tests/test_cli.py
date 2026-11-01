@@ -268,11 +268,13 @@ class CliCheckpointTests(unittest.TestCase):
     def _matching_configuration(self, checkpoint_dir: str) -> AttackConfiguration:
         # Must mirror exactly what main() builds from _arguments() above,
         # since compute_session_id hashes the whole configuration.
+        from cli.main import DEFAULT_CHARSET
         return AttackConfiguration(
             target=Target("https://example.test/filter", query={"tracking": "base"}),
             parameter="tracking",
             detector_value="TRUE",
             checkpoint_dir=checkpoint_dir,
+            charset=DEFAULT_CHARSET,
         )
 
     @patch("cli.main.build_attack_engine")
@@ -615,7 +617,7 @@ class CliEnumTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertNotIn("extended charset", output.getvalue())
         used_configuration = build_engine.call_args.args[0]
-        self.assertNotIn(",", used_configuration.charset)
+        self.assertNotIn("~", used_configuration.charset)
 
     @patch("cli.main.build_attack_engine")
     def test_enum_does_not_override_explicit_charset(self, build_engine) -> None:
@@ -808,7 +810,7 @@ class CliShortcutTests(unittest.TestCase):
 
         self.assertEqual(code, 0)
         used_config = build_engine.call_args.args[0]
-        self.assertNotIn(",", used_config.charset)
+        self.assertNotIn("~", used_config.charset)
 
     def test_dump_columns_parsed_as_list(self) -> None:
         args = build_parser().parse_args(

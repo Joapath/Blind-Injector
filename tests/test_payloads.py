@@ -43,7 +43,7 @@ class ConditionBuilderTests(unittest.TestCase):
 class PayloadBuilderTests(unittest.TestCase):
     def test_wraps_condition_with_default_boolean_syntax(self) -> None:
         builder = BooleanPayloadBuilder()
-        self.assertEqual(builder.build("1=1"), "' AND (1=1)--")
+        self.assertEqual(builder.build("1=1"), "' AND (1=1)-- ")
 
     def test_supports_custom_delimiters(self) -> None:
         builder = BooleanPayloadBuilder(prefix="' OR ", suffix="-- ")

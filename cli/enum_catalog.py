@@ -28,12 +28,12 @@ LIST_KINDS = ("columns", "databases", "tables")
 LIST_EXTRA_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ_,"
 
 DUMP_EXTRA_CHARS = (
-    "§,._ -@#$%&*()[]{}|/\\:;!?<>=+'"
+    "~,._ -@#$%&*()[]{}|/\\:;!?<>=+'"
     + string.ascii_uppercase
     + string.digits
 )
 
-ROW_SEPARATOR = "§"
+ROW_SEPARATOR = "~"
 
 _CATALOG: dict[str, dict[str, str]] = {
     "version": {
@@ -85,9 +85,9 @@ _CATALOG: dict[str, dict[str, str]] = {
         ),
     },
     "count": {
-        "mysql": "(SELECT COUNT(*) FROM {qualified_table})",
-        "postgres": "(SELECT COUNT(*) FROM {qualified_table})",
-        "oracle": "(SELECT COUNT(*) FROM {qualified_table})",
+        "mysql": "(SELECT CAST(COUNT(*) AS CHAR) FROM {qualified_table})",
+        "postgres": "(SELECT COUNT(*)::text FROM {qualified_table})",
+        "oracle": "(SELECT TO_CHAR(COUNT(*)) FROM {qualified_table})",
     },
 }
 
@@ -185,10 +185,10 @@ def build_row_expression(
     database: str | None = None,
     offset: int,
 ) -> str:
-    """Build a subquery that extracts one row as a §-separated string.
+    """Build a subquery that extracts one row as a ~-separated string.
 
     Each column is wrapped in COALESCE to handle NULLs.  The result is a
-    single string like ``val1§val2§val3`` that the caller splits by ``§``.
+    single string like ``val1~val2~val3`` that the caller splits by ``~``.
     """
     if not columns:
         raise ValueError("columns list cannot be empty")

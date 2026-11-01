@@ -1,6 +1,7 @@
 """High-level attack orchestration."""
 
 import logging
+import time
 from collections.abc import Callable, Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -70,9 +71,19 @@ class BlindAttackEngine(AttackEngine):
         if self._is_technique(self._extractor):
             if not self._extractor.validate():
                 raise ValueError("technique validation failed")
-            if not self._extractor.probe():
-                raise ValueError("technique probe failed")
-            if not self._extractor.confirm():
+
+            max_oracle_attempts = 3
+            for attempt in range(max_oracle_attempts):
+                if self._extractor.probe() and self._extractor.confirm():
+                    break
+                if attempt < max_oracle_attempts - 1:
+                    backoff = 0.5 * (2 ** attempt)
+                    logger.info(
+                        "Oracle check failed (attempt %d/%d), retrying in %.1fs",
+                        attempt + 1, max_oracle_attempts, backoff,
+                    )
+                    time.sleep(backoff)
+            else:
                 raise ValueError("technique confirmation failed")
 
             evidence = self._extractor.collect_evidence()
