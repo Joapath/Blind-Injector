@@ -97,6 +97,28 @@ class BlindTechniqueTests(unittest.TestCase):
         self.assertFalse(technique.confirm())
         self.assertEqual(technique.collect_evidence().confidence.value, "probable")
 
+    def test_collect_evidence_records_oracle_quality_metrics(self) -> None:
+        extractor = FakeExtractor({"1=1": True, "1=2": False})
+        technique = ExampleBlindTechnique(extractor)
+
+        self.assertTrue(technique.probe())
+        evidence = technique.collect_evidence()
+
+        self.assertTrue(evidence.oracle_valid)
+        self.assertEqual(evidence.signal_strength, 1.0)
+        self.assertEqual(evidence.repetitions, 1)
+        self.assertIn("oracle_valid", evidence.to_dict())
+
+    def test_unstable_oracle_is_marked_invalid(self) -> None:
+        extractor = FakeExtractor({"1=1": True, "1=2": True})
+        technique = ExampleBlindTechnique(extractor)
+
+        self.assertFalse(technique.probe())
+        evidence = technique.collect_evidence()
+
+        self.assertFalse(evidence.oracle_valid)
+        self.assertEqual(evidence.signal_strength, 0.0)
+
     def test_extract_delegates_without_reimplementing_search(self) -> None:
         extractor = FakeExtractor({"1=1": True, "1=2": False})
         technique = ExampleBlindTechnique(extractor)

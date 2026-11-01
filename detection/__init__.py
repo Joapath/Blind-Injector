@@ -6,6 +6,7 @@ from .length import LengthDetector
 from .status import StatusCodeDetector
 from .text import TextDetector
 from .timing import TimingDetector
+from .value import ErrorValueExtractor
 
 __all__ = [
 	"Detector",
@@ -14,4 +15,5 @@ __all__ = [
 	"StatusCodeDetector",
 	"TextDetector",
 	"TimingDetector",
+	"ErrorValueExtractor",
 ]

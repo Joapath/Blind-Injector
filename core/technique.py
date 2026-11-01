@@ -4,6 +4,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Any
 
+from models.attack import CharacterResult
 from models.evidence import Evidence
 
 
@@ -26,8 +27,16 @@ class Technique(ABC):
         ...
 
     @abstractmethod
-    def extract(self, expression: str) -> Any:
-        """Extract the requested expression from the configured target."""
+    def extract(
+        self, expression: str, *, resume_from: tuple[CharacterResult, ...] = ()
+    ) -> Any:
+        """Extract the requested expression from the configured target.
+
+        ``resume_from`` optionally seeds positions already resolved by a
+        previous, interrupted run (see ``core.checkpoint``). Techniques that
+        have no notion of partial, per-position progress may accept and
+        ignore it.
+        """
         ...
 
     @abstractmethod

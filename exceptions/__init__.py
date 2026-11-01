@@ -12,3 +12,12 @@ class HttpRequestError(BlindFinderError):
         super().__init__("HTTP request failed")
         self.url = url
         self.cause = cause
+
+
+class CheckpointError(BlindFinderError):
+    """A checkpoint file could not be read, written, or parsed."""
+
+    def __init__(self, path: str, cause: Exception) -> None:
+        super().__init__("Checkpoint could not be processed")
+        self.path = path
+        self.cause = cause

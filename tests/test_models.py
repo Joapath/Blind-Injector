@@ -78,6 +78,20 @@ class ConfigurationTests(unittest.TestCase):
                 detector_value="ORA-01476",
             )
 
+    def test_auto_technique_skips_technique_specific_validation(self) -> None:
+        target = Target("https://example.test")
+        configuration = AttackConfiguration(target, parameter="tracking", technique="auto")
+
+        self.assertEqual(configuration.technique, "auto")
+        # Generic fields still validate even for "auto".
+        with self.assertRaises(ValueError):
+            AttackConfiguration(target, parameter="tracking", technique="auto", max_length=0)
+
+    def test_rejects_unknown_technique(self) -> None:
+        target = Target("https://example.test")
+        with self.assertRaises(ValueError):
+            AttackConfiguration(target, parameter="tracking", technique="not-a-technique")
+
 
 class HttpModelTests(unittest.TestCase):
     def test_response_exposes_decoded_content_length(self) -> None:

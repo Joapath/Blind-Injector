@@ -116,6 +116,14 @@ class InjectionPointTests(unittest.TestCase):
         self.assertEqual(result.cookies["session"], "abc' AND 1=1--")
         self.assertEqual(self.request.cookies["session"], "abc")
 
+    def test_replaces_cookie_value_without_mutating_original(self) -> None:
+        result = CookieInjectionPoint("session", "replace").inject(
+            self.request, "payload"
+        )
+
+        self.assertEqual(result.cookies["session"], "payload")
+        self.assertEqual(self.request.cookies["session"], "abc")
+
     def test_rejects_missing_parameter(self) -> None:
         points = (
             QueryParameterInjectionPoint("missing"),
@@ -129,6 +137,10 @@ class InjectionPointTests(unittest.TestCase):
     def test_rejects_empty_parameter(self) -> None:
         with self.assertRaises(ValueError):
             QueryParameterInjectionPoint("").inject(self.request, "payload")
+
+    def test_rejects_invalid_injection_mode(self) -> None:
+        with self.assertRaises(ValueError):
+            CookieInjectionPoint("session", "prepend")
 
 
 if __name__ == "__main__":

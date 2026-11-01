@@ -46,6 +46,7 @@ class AttackConfiguration:
     delay: float = 0.0
     parameter: str = ""
     injection_location: str = "query"
+    injection_mode: str = "append"
     strategy: str = "binary"
     detector: str = "text"
     detector_value: str = ""
@@ -65,7 +66,18 @@ class AttackConfiguration:
     username: str = "administrator"
     error_text: str | None = None
     error_regex: str | None = None
+    error_value_regex: str | None = None
     error_status: int | None = None
+    auto_calibrate: bool = False
+    calibration_samples: int = 5
+    calibration_tolerance_factor: float = 3.0
+    rate_limit: float | None = None
+    max_workers: int = 1
+    resume: bool = False
+    checkpoint_dir: str | None = None
+    tampers: tuple[str, ...] = ()
+    random_agent: bool = False
+    random_forwarded_for: bool = False
 
     def __post_init__(self) -> None:
         if not self.charset:
@@ -82,25 +94,67 @@ class AttackConfiguration:
             raise ValueError("parameter cannot be empty")
         if self.injection_location not in {"query", "body", "cookie"}:
             raise ValueError("injection_location must be query, body, or cookie")
+        if self.injection_mode not in {"append", "replace"}:
+            raise ValueError("injection_mode must be append or replace")
         if self.strategy not in {"brute", "binary"}:
             raise ValueError("strategy must be brute or binary")
-        if self.technique not in {"boolean", "time"}:
-            raise ValueError("technique must be boolean or time")
+        if self.technique not in {"boolean", "time", "visible-error", "auto"}:
+            raise ValueError("technique must be boolean, time, visible-error, or auto")
         if self.detector not in {"text", "length", "status", "error", "timing"}:
             raise ValueError("detector must be text, length, status, error, or timing")
-        if self.attack_mode not in {"conditional-response", "conditional-error"}:
-            raise ValueError("attack_mode must be conditional-response or conditional-error")
+        if self.attack_mode not in {
+            "conditional-response",
+            "conditional-error",
+            "visible-error",
+        }:
+            raise ValueError(
+                "attack_mode must be conditional-response, conditional-error, or visible-error"
+            )
         if not self.dialect:
             raise ValueError("dialect cannot be empty")
         for name in ("table", "column", "user_column", "username"):
             if not getattr(self, name).strip():
                 raise ValueError(f"{name} cannot be empty")
 
+        if self.calibration_samples < 1:
+            raise ValueError("calibration_samples must be positive")
+        if self.calibration_tolerance_factor <= 0:
+            raise ValueError("calibration_tolerance_factor must be greater than zero")
+        if self.rate_limit is not None and self.rate_limit <= 0:
+            raise ValueError("rate_limit must be greater than zero")
+        if self.max_workers < 1:
+            raise ValueError("max_workers must be positive")
+        if self.max_workers > 1 and self.technique == "time":
+            raise ValueError(
+                "max_workers greater than 1 is not supported for technique=time: "
+                "concurrent requests would skew timing measurements"
+            )
+        if self.max_length < 1:
+            raise ValueError("max_length must be positive")
+
+        if self.technique == "auto":
+            # Nothing technique-specific is known yet -- fingerprinting (see
+            # config.fingerprint) decides it. Only the generic request/
+            # extraction fields validated above apply.
+            return
+
+        if self.technique == "visible-error":
+            if self.attack_mode != "visible-error":
+                raise ValueError("visible-error technique requires visible-error attack mode")
+            if self.dialect != "postgres":
+                raise ValueError("visible-error currently supports only the postgres dialect")
+            if self.detector != "error":
+                raise ValueError("visible-error technique requires the error detector")
+            return
+
+        if self.attack_mode == "visible-error":
+            raise ValueError("visible-error attack mode requires technique=visible-error")
+
         if self.technique == "time":
             if self.attack_mode != "conditional-response":
                 raise ValueError("time-based attacks require conditional-response attack mode")
-            if self.dialect != "mysql":
-                raise ValueError("time-based attacks currently support only the mysql dialect")
+            if self.dialect not in {"mysql", "postgres"}:
+                raise ValueError("time-based attacks currently support the mysql or postgres dialects")
             if self.sleep_seconds is None or self.sleep_seconds <= 0:
                 raise ValueError("sleep_seconds is required for time-based techniques")
             if self.timing_threshold is None or self.timing_threshold <= 0:
@@ -151,5 +205,3 @@ class AttackConfiguration:
         if self.detector == "status":
             if self.expected_status is None or not 100 <= self.expected_status <= 599:
                 raise ValueError("expected_status is required for status detection")
-        if self.max_length < 1:
-            raise ValueError("max_length must be positive")

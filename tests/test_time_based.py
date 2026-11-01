@@ -49,6 +49,20 @@ class TimingComponentTests(unittest.TestCase):
         )
         self.assertEqual(builder.build("1=1"), "' AND (1=1) AND DB_SLEEP(3.0)--")
 
+    def test_for_dialect_builds_known_presets(self) -> None:
+        mysql = TimePayloadBuilder.for_dialect("mysql", 5.0)
+        self.assertEqual(mysql.build("1=1"), "' AND IF((1=1),SLEEP(5.0),0)--")
+
+        postgres = TimePayloadBuilder.for_dialect("postgres", 5.0)
+        self.assertEqual(
+            postgres.build("1=1"),
+            "'||(SELECT CASE WHEN (1=1) THEN pg_sleep(5.0) ELSE pg_sleep(0) END)||'",
+        )
+
+    def test_for_dialect_rejects_unknown_dialect(self) -> None:
+        with self.assertRaises(ValueError):
+            TimePayloadBuilder.for_dialect("mssql", 5.0)
+
 
 class FakeTimingExtractor:
     def __init__(self) -> None:

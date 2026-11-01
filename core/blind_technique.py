@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 from core.technique import Technique
 from core.extractor import BlindExtractor
-from models.attack import ExtractionResult
+from models.attack import CharacterResult, ExtractionResult
 from models.http import HttpResponseData, RequestData
 from models.evidence import Evidence, Confidence
 
@@ -82,24 +82,39 @@ class BlindTechnique(Technique):
         self._confirm_result = true_check.result != false_check.result
         return self._confirm_result
 
-    def extract(self, expression: str) -> ExtractionResult:
-        self._last_extraction = self._extractor.extract(expression)
+    def extract(
+        self, expression: str, *, resume_from: tuple[CharacterResult, ...] = ()
+    ) -> ExtractionResult:
+        # Only forward resume_from when actually resuming: this keeps any
+        # Extractor that predates the resume feature (fakes in tests, or a
+        # future alternative implementation) working unchanged when it is
+        # never exercised.
+        if resume_from:
+            self._last_extraction = self._extractor.extract(expression, resume_from=resume_from)
+        else:
+            self._last_extraction = self._extractor.extract(expression)
         return self._last_extraction
 
     def collect_evidence(self) -> Evidence:
         """Return the best available snapshot from this technique run."""
         checks = self._last_confirm or self._last_probe
         if checks is not None:
-            true_check, _ = checks
+            true_check, false_check = checks
             payload = true_check.payload
             raw_request = true_check.request.to_dict()
             raw_response = true_check.response.to_dict()
+            oracle_valid = true_check.result != false_check.result
+            signal_strength = 1.0 if oracle_valid else 0.0
+            repetitions = 1
         elif self._last_extraction is not None:
             payload = self._extractor.last_payload or ""
             request = self._extractor.last_request
             response = self._extractor.last_response
             raw_request = request.to_dict() if request is not None else {}
             raw_response = response.to_dict() if response is not None else {}
+            oracle_valid = self._probe_result is True or self._confirm_result is True
+            signal_strength = 1.0 if oracle_valid else 0.0
+            repetitions = 1
         else:
             raise RuntimeError("collect_evidence() called before probe, confirm, or extract")
 
@@ -118,6 +133,13 @@ class BlindTechnique(Technique):
             ),
             raw_request=raw_request,
             raw_response=raw_response,
+            oracle_valid=oracle_valid,
+            signal_strength=signal_strength,
+            repetitions=repetitions,
+            metadata={
+                "oracle_result": self._confirm_result if self._confirm_result is not None else self._probe_result,
+                "signal_valid": oracle_valid,
+            },
         )
 
     def _injection_point_snapshot(self) -> dict[str, object]:

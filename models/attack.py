@@ -21,6 +21,23 @@ class CharacterResult:
         if self.attempts < 0:
             raise ValueError("attempts cannot be negative")
 
+    def to_dict(self) -> dict[str, object]:
+        """Return a JSON-safe snapshot of this result."""
+        return {
+            "position": self.position,
+            "character": self.character,
+            "attempts": self.attempts,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, object]) -> "CharacterResult":
+        """Rebuild a result from a snapshot produced by :meth:`to_dict`."""
+        return cls(
+            position=int(data["position"]),  # type: ignore[arg-type]
+            character=data["character"],  # type: ignore[arg-type]
+            attempts=int(data["attempts"]),  # type: ignore[arg-type]
+        )
+
 
 @dataclass(frozen=True, slots=True)
 class ExtractionResult:
@@ -30,6 +47,28 @@ class ExtractionResult:
     value: str
     characters: tuple[CharacterResult, ...] = ()
     complete: bool = True
+
+    def to_dict(self) -> dict[str, object]:
+        """Return a JSON-safe snapshot of this result."""
+        return {
+            "expression": self.expression,
+            "value": self.value,
+            "characters": [character.to_dict() for character in self.characters],
+            "complete": self.complete,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, object]) -> "ExtractionResult":
+        """Rebuild a result from a snapshot produced by :meth:`to_dict`."""
+        characters = tuple(
+            CharacterResult.from_dict(item) for item in data["characters"]  # type: ignore[union-attr]
+        )
+        return cls(
+            expression=data["expression"],  # type: ignore[arg-type]
+            value=data["value"],  # type: ignore[arg-type]
+            characters=characters,
+            complete=bool(data["complete"]),
+        )
 
 
 @dataclass(frozen=True, slots=True)

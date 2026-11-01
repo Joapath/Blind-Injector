@@ -25,6 +25,10 @@ class Evidence:
     extracted_data: Any | None
     raw_request: dict
     raw_response: dict
+    oracle_valid: bool = False
+    signal_strength: float = 0.0
+    repetitions: int = 0
+    metadata: dict[str, Any] = field(default_factory=dict)
     timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
     def to_dict(self) -> dict:

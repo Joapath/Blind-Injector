@@ -7,23 +7,38 @@ from models.http import RequestData
 from .contracts import InjectionPoint
 
 
-def _with_payload(values: dict[str, str], parameter: str, payload: str) -> dict[str, str]:
+_INJECTION_MODES = frozenset({"append", "replace"})
+
+
+def _validate_mode(mode: str) -> None:
+    if mode not in _INJECTION_MODES:
+        raise ValueError("mode must be append or replace")
+
+
+def _with_payload(
+    values: dict[str, str], parameter: str, payload: str, mode: str
+) -> dict[str, str]:
     if not parameter:
         raise ValueError("parameter cannot be empty")
+    _validate_mode(mode)
     if parameter not in values:
         raise KeyError(f"Parameter not found: {parameter}")
-    values[parameter] = f"{values[parameter]}{payload}"
+    values[parameter] = f"{values[parameter]}{payload}" if mode == "append" else payload
     return values
 
 
 @dataclass(frozen=True, slots=True)
 class QueryParameterInjectionPoint(InjectionPoint):
-    """Append a payload to one query-string parameter."""
+    """Inject a payload into one query-string parameter."""
 
     parameter: str
+    mode: str = "append"
+
+    def __post_init__(self) -> None:
+        _validate_mode(self.mode)
 
     def inject(self, request: RequestData, payload: str) -> RequestData:
-        query = _with_payload(dict(request.query), self.parameter, payload)
+        query = _with_payload(dict(request.query), self.parameter, payload, self.mode)
         return RequestData(
             url=request.url,
             method=request.method,
@@ -36,12 +51,16 @@ class QueryParameterInjectionPoint(InjectionPoint):
 
 @dataclass(frozen=True, slots=True)
 class BodyParameterInjectionPoint(InjectionPoint):
-    """Append a payload to one form body parameter."""
+    """Inject a payload into one form body parameter."""
 
     parameter: str
+    mode: str = "append"
+
+    def __post_init__(self) -> None:
+        _validate_mode(self.mode)
 
     def inject(self, request: RequestData, payload: str) -> RequestData:
-        body = _with_payload(dict(request.body), self.parameter, payload)
+        body = _with_payload(dict(request.body), self.parameter, payload, self.mode)
         return RequestData(
             url=request.url,
             method=request.method,
@@ -54,12 +73,16 @@ class BodyParameterInjectionPoint(InjectionPoint):
 
 @dataclass(frozen=True, slots=True)
 class CookieInjectionPoint(InjectionPoint):
-    """Append a payload to one cookie value."""
+    """Inject a payload into one cookie value."""
 
     parameter: str
+    mode: str = "append"
+
+    def __post_init__(self) -> None:
+        _validate_mode(self.mode)
 
     def inject(self, request: RequestData, payload: str) -> RequestData:
-        cookies = _with_payload(dict(request.cookies), self.parameter, payload)
+        cookies = _with_payload(dict(request.cookies), self.parameter, payload, self.mode)
         return RequestData(
             url=request.url,
             method=request.method,
